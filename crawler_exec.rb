@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
-require 'twitter'
-require 'mysql'
-require 'date'
+require "twitter"
+require "mysql"
+require "date"
+require "inifile"
 
 class Fetching_tw
     def initialize(q)
         begin
+            inifile = IniFile.load("./keys.ini")
             @data=[]
             @since_id = 0
             @query = q
             @client = Twitter::REST::Client.new do |config|
-                config.consumer_key        = "*"
-                config.consumer_secret     = "*"
-                config.access_token        = "*"
-                config.access_token_secret = "*"
+                config.consumer_key        = _get(inifile, "twitter", 'config.consumer_key')
+                config.consumer_secret     = _get(inifile, "twitter", 'config.consumer_secret')
+                config.access_token        = _get(inifile, "twitter", 'config.access_token')
+                config.access_token_secret = _get(inifile, "twitter", 'config.access_token_secret')
             end
 
         rescue Twitter::Error::ClientError
@@ -48,11 +50,11 @@ end
 
 class Mymysql
     def initialize()
-        #    tblname='tbl_'+DateTime.now.strftime('%Y_%m_%d_%H_%M_%S').to_s
-        @dbname="tw_data_"+DateTime.now.strftime('%y_%m_%d').to_s
-        @tblname='tbl_'+DateTime.now.strftime('%H').to_s
+        #    tblname="tbl_"+DateTime.now.strftime("%Y_%m_%d_%H_%M_%S").to_s
+        @dbname="tw_data_"+DateTime.now.strftime("%y_%m_%d").to_s
+        @tblname="tbl_"+DateTime.now.strftime("%H").to_s
 
-        @client= Mysql.connect('127.0.0.1', 'root', 'root')
+        @client= Mysql.connect("127.0.0.1", "root", "root")
         @client.query("set character set utf8mb4")
         @client.query("CREATE DATABASE IF NOT EXISTS #{@dbname}")
         @client.query("USE #{@dbname}")
@@ -61,11 +63,20 @@ class Mymysql
     def set_to_mysql(data)
       puts data
           data.each do |elt|
-          elt[2] = elt[2].gsub(/['"]/) {|ch| ch + ch }
+          elt[2] = elt[2].gsub(/[""]/) {|ch| ch + ch }
           @client.query("insert into #{@tblname}(id, name, text)VALUES('#{elt[0].to_s}', '#{elt[1].to_s}', '#{elt[2].to_s}')")
         end
     end
 end
+
+def _get(inifile, section, name)
+  begin
+    return inifile[section][name]
+  rescue => e
+    return "error: could not read #{name}"
+  end
+end
+
 
 query = ""
 
@@ -83,11 +94,11 @@ puts ("クエリ： "+query)
 
 tw = Fetching_tw.new(query)
 while true
-    puts ("---------------------twitterデータ取得中-----------------------")
+    puts ("---------------------get data from twitter-----------------------")
     tw.fetching
-    puts ("---------------------mysqlにデータ入力中-----------------------")
+    puts ("---------------------put data to mysql-----------------------")
     sql = Mymysql.new()
     sql.set_to_mysql(tw.getData())
-    puts ("---------------------休憩中-----------------------")
+    puts ("---------------------sleep for 60s-----------------------")
     sleep(60)
 end
