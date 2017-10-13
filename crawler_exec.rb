@@ -46,26 +46,27 @@ class Fetching_tw
     def getData()
         return @data
     end
-end
 
+end
 class Mymysql
-    def initialize()
+    def initialize(q)
         #    tblname="tbl_"+DateTime.now.strftime("%Y_%m_%d_%H_%M_%S").to_s
-        @dbname="tw_data_"+DateTime.now.strftime("%y_%m_%d").to_s
-        @tblname="tbl_"+DateTime.now.strftime("%H").to_s
+        @dbname="tw_data"
+        @tblname=q
 
         @client= Mysql.connect("127.0.0.1", "root", "root")
         @client.query("set character set utf8mb4")
         @client.query("CREATE DATABASE IF NOT EXISTS #{@dbname}")
         @client.query("USE #{@dbname}")
-        @client.query("create table if not EXISTS #{@tblname} (id char(18), name char(32), text varchar(255))")
+        @client.query("create table if not EXISTS #{@tblname} (id char(18), name char(32), text varchar(255), date DATETIME(6))")
     end
     def set_to_mysql(data)
+      date = DateTime.now.strftime('%Y-%m-%d %I:%M:%S')
       puts data
-          data.each do |elt|
-          elt[2] = elt[2].gsub(/[""]/) {|ch| ch + ch }
-          @client.query("insert into #{@tblname}(id, name, text)VALUES('#{elt[0].to_s}', '#{elt[1].to_s}', '#{elt[2].to_s}')")
-        end
+      data.each do |elt|
+        elt[2] = elt[2].gsub(/['']/) {|ch| ch + ch }
+        @client.query("insert into #{@tblname}(id, name, text, date)VALUES('#{elt[0].to_s}', '#{elt[1].to_s}', '#{elt[2].to_s}', '#{date}')")
+      end
     end
 end
 
@@ -73,7 +74,7 @@ def _get(inifile, section, name)
   begin
     return inifile[section][name]
   rescue => e
-    return "error: could not read #{name}"
+    return "error: could not read #{name} msg:"+e
   end
 end
 
@@ -97,7 +98,7 @@ while true
     puts ("---------------------get data from twitter-----------------------")
     tw.fetching
     puts ("---------------------put data to mysql-----------------------")
-    sql = Mymysql.new()
+    sql = Mymysql.new(query)
     sql.set_to_mysql(tw.getData())
     puts ("---------------------sleep for 60s-----------------------")
     sleep(60)
