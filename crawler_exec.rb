@@ -56,16 +56,15 @@ def _get(inifile, section, name)
   end
 end
 
-query = ""
 
-ARGV.each do |arg|
-    query += arg.to_s+" "
-end
-
-if (query == "") then
-  puts ("No arguments are provided")
+begin
+  table_name = ARGV[0]
+  query = ARGV[1]
+rescue
+  puts ("invalid arguments are provided")
   exit(1)
 end
+
 
 cluster = Cassandra.cluster
 
@@ -73,7 +72,7 @@ keyspace_name = 'twitter'
 session  = cluster.connect(keyspace_name)
 
 table_definition = <<-TABLE_CQL
-  CREATE TABLE IF NOT EXISTS #{query} (
+  CREATE TABLE IF NOT EXISTS #{table_name} (
     id VARCHAR,
     name VARCHAR,
     text TEXT,
